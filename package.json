@@ -1,0 +1,25 @@
+{
+  "name": "replicated-log",
+  "version": "1.0.0",
+  "description": "",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/VitosPyatak/replicated-log.git"
+  },
+  "author": "vic",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/VitosPyatak/replicated-log/issues"
+  },
+  "homepage": "https://github.com/VitosPyatak/replicated-log#readme",
+  "devDependencies": {
+    "typescript": "^5.6.2"
+  },
+  "dependencies": {
+    "@types/node": "^22.5.5"
+  }
+}
