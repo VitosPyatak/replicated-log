@@ -16,7 +16,7 @@
             "request": "launch",
             "name": "Debug Program",
             "program": "${workspaceFolder}/src/app.ts",
-            "preLaunchTask": "tsc: build - tsconfig.json",
+            "preLaunchTask": "tsc: build - tsconfig.dev.json",
             "outFiles": ["${workspaceFolder}/dist/**/*.js"]
         }
     ]

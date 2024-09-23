@@ -18,7 +18,11 @@ export class ServerFactory {
     }
 
     public run = (): ServerFactory => {
-        this.server.on('request', this.processIncomingRequest).listen(PORT);
+        this.server
+            .on('request', this.processIncomingRequest)
+            .listen(PORT, () => {
+                console.log(`Listening on ${PORT}`);
+            });
         return this;
     }
 
