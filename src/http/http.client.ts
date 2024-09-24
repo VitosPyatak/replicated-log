@@ -30,13 +30,13 @@ export class HttpClient {
     return this.processHttpRequest(httpMethods.POST, options);
   };
 
-  private processHttpRequest = async (method: HttpMethod, { host, path, data }: HttpClientRequestProperties) => {
+  private processHttpRequest = async (method: HttpMethod, { host, path, data, headers }: HttpClientRequestProperties) => {
     const request = http.request({
       host: host,
       path,
       method,
       port: 8000,
-      headers: defaultAppHeaders
+      headers: { ...defaultAppHeaders, ...(headers || {}) }
     });
 
     this.logger.info(`Preparing to execture http request with ${host}${path}`);

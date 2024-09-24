@@ -1,4 +1,6 @@
-export const defaultAppHeaders = {} as const;
+export const defaultAppHeaders = {
+  'Content-Type': 'application/json'
+} as const;
 
 export const httpMethods = {
   POST: 'POST'

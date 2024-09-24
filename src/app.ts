@@ -10,8 +10,21 @@ import { EnvContext } from './utils/env.context';
             path: appRoutes.messages,
             method: httpMethods.POST,
             replicateRequest: EnvContext.isMaster(),
+            accessStrategy: 'default',
             processor: MessagesController.get().saveMessage,
         })
-        .registerRoute({ path: appRoutes.messages, method: 'GET', processor: MessagesController.get().getAll })
+        .registerRoute({
+            path: appRoutes.messages,
+            method: 'GET',
+            processor: MessagesController.get().getAll
+        })
         .run();
+
+    process.on('uncaughtException', (error) => {
+        console.error('Uncaught exception', error);
+    });
+
+    process.on('unhandledRejection', (reason, promise) => {
+        console.error('Unhandled rejection at:', promise, 'reason:', reason);
+    });
 })();

@@ -6,6 +6,7 @@ import { HttpClientGeneralRequestProperties } from '../http/http.types';
 import { HttpClient } from '../http/http.client';
 import { parseIncommingMessageData } from './server.utils';
 import { Logger } from '../logger/logger.manager';
+import { AuthManager } from '../auth/auth.manager';
 
 const PORT = 8000;
 
@@ -14,10 +15,18 @@ export class ServerFactory {
 
     private routeRegistry: Record<string, RegisterRouteOptions> = {};
 
-    public constructor(private readonly server: Server, private readonly httpClient: HttpClient) { }
+    public constructor(
+        private readonly server: Server,
+        private readonly httpClient: HttpClient,
+        private readonly authManager: AuthManager
+    ) { }
 
     public static base = (): ServerFactory => {
-        return new ServerFactory(createServer(), HttpClient.get());
+        return new ServerFactory(
+            createServer(),
+            HttpClient.get(),
+            AuthManager.get()
+        );
     };
 
     public registerRoute = (options: RegisterRouteOptions): ServerFactory => {
@@ -26,11 +35,20 @@ export class ServerFactory {
     };
 
     public run = (): ServerFactory => {
-        this.server.on('request', this.processIncomingRequest).listen(PORT, () => {
+        this.server.on('request', async (request, response) => {
+            try {
+                return await this.processIncomingRequest(request, response);
+            } catch (error: any) {
+                response.writeHead(500, error.message);
+                return response.end();
+            }
+        }).listen(PORT, () => {
             this.logger.info(`Listening on ${PORT}`);
         });
         return this;
     };
+
+
 
     private processIncomingRequest = async (request: IncomingMessage, response: ServerResponse) => {
         const key = this.constructRegistryKeyFromRequest(request);
@@ -38,6 +56,7 @@ export class ServerFactory {
         const options = this.routeRegistry[key];
         if (!options) return this.handleNotFound(response);
 
+        this.authManager.validate(request, options);
 
         if (options.replicateRequest) {
             return this.processRequestReplication(request, response, options);
@@ -48,14 +67,20 @@ export class ServerFactory {
         return this.processSuccessfullRequest(response, data);
     };
 
-    private processRequestReplication = async (request: IncomingMessage, serverResponse: ServerResponse, { path, method, processor }: RegisterRouteOptions) => {
+    private processRequestReplication = async (
+        request: IncomingMessage,
+        serverResponse: ServerResponse,
+        { path, method, accessStrategy, processor }: RegisterRouteOptions
+    ) => {
         const requestData = await parseIncommingMessageData(request);
 
         const processorResponse = await processor({ data: requestData });
         const replicationRequestsOptions: HttpClientGeneralRequestProperties[] = EnvContext.getReplicaHostNames()
-            .map(host => ({ host, path, method: method as HttpMethod, data: requestData }));
-
-        this.logger.info(`Replicating messages to ${JSON.stringify(replicationRequestsOptions, null, 2)}`);
+            .map(host => {
+                const headers: Record<string, string> = accessStrategy ? { authorization: this.authManager.generateAccessToken(accessStrategy) } : {};
+                this.logger.info(JSON.stringify(headers));
+                return { host, path, method: method as HttpMethod, data: requestData, headers }
+            });
 
         return Promise
             .all(replicationRequestsOptions.map(this.httpClient.request))
