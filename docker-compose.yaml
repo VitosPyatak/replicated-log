@@ -1,11 +1,20 @@
 version: '3.9'
 
 services:
-  api:
+  api: &api
     image: replicated-log:latest
-    build: .
-    command: npm run start
     ports:
       - '4000:8000'
-    volumes:
-      - ./api:/app
+    networks:
+      - replicated_log_network
+  api_replica_1:
+    <<: *api
+    ports:
+      - '4001:8000'
+  api_replica_2:
+    <<: *api
+    ports:
+      - '4002:8000'
+
+networks:
+  replicated_log_network:

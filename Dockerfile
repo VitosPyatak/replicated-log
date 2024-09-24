@@ -5,7 +5,7 @@ WORKDIR /app
 COPY package.json tsconfig.json tsconfig.dev.json ./
 COPY src ./src
 
-RUN npm install && npm run build
+RUN npm install --only=production && npm run build
 
 FROM node:18.16.0-alpine
 
