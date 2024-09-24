@@ -1,7 +1,7 @@
-import { IncomingMessage } from "http";
-import { MessagesManager } from "./messages.manager";
-import { StoreMessage } from "./messages.types";
-import { parseIncommingMessageData } from "../server/server.utils";
+import { MessagesManager } from './messages.manager';
+import { StoreMessage } from './messages.types';
+import { Logger } from '../logger/logger.manager';
+import { ParsedIncommingRequest } from '../server/server.types';
 
 export class MessagesController {
     private constructor(private readonly messagesManager: MessagesManager) { }
@@ -10,14 +10,18 @@ export class MessagesController {
 
     public static get = () => {
         return this.instance;
-    }
+    };
 
-    public saveMessage = async (request: IncomingMessage) => {
-        const message = await parseIncommingMessageData<StoreMessage>(request);
-        return this.messagesManager.save(message);
-    }
+    public saveMessage = async ({ data }: ParsedIncommingRequest<StoreMessage>) => {
+        if (!data) {
+            throw new Error('Invalid message');
+        }
 
-    public getAll = async (__: IncomingMessage) => {
+        Logger.logIncommingMessage(data);
+        return this.messagesManager.save(data);
+    };
+
+    public getAll = async (__: ParsedIncommingRequest<any>) => {
         return this.messagesManager.getAll();
-    }
+    };
 }

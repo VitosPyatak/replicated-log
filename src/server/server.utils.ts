@@ -1,7 +1,6 @@
+import { IncomingMessage } from 'http';
 
-import { IncomingMessage } from "http";
-
-export const parseIncommingMessageData = async <T>(request: IncomingMessage): Promise<T> => {
+export const parseIncommingMessageData = async <T>(request: IncomingMessage): Promise<T | null> => {
     return new Promise((resolve) => {
         let body: string[] = [];
 
@@ -10,7 +9,12 @@ export const parseIncommingMessageData = async <T>(request: IncomingMessage): Pr
         });
 
         request.on('end', () => {
-            resolve(JSON.parse(body.join('')) as T);
+            try {
+                const parsedBody = JSON.parse(body.join('')) as T
+                return resolve(parsedBody);
+            } catch {
+                return resolve(null);
+            }
         });
     });
-}
+};

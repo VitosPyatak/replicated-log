@@ -1,11 +1,11 @@
-FROM node:18.16.0-alpine as base
+FROM node:18.16.0-alpine AS base
 
 WORKDIR /app
 
-COPY package.json tsconfig.json tsconfig.dev.json ./
+COPY package.json tsconfig.json tsconfig.dev.json .env.master .env.secondary ./
 COPY src ./src
 
-RUN npm install --only=production && npm run build
+RUN npm install && npm run build
 
 FROM node:18.16.0-alpine
 
