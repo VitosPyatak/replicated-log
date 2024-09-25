@@ -1,9 +1,9 @@
 export const defaultAppHeaders = {
-  'Content-Type': 'application/json'
+    'Content-Type': 'application/json',
 } as const;
 
 export const httpMethods = {
-  POST: 'POST'
+    POST: 'POST',
 } as const;
 
-export type HttpMethod = typeof httpMethods[keyof typeof httpMethods];
+export type HttpMethod = (typeof httpMethods)[keyof typeof httpMethods];

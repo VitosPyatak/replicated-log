@@ -7,7 +7,7 @@
         "build:dev": "tsc --p tsconfig.dev.json",
         "build": "tsc --p tsconfig.json",
         "start": "node dist/app.js",
-        "prettyfy": "prettier --write ."
+        "prettify": "prettier --write ."
     },
     "repository": {
         "type": "git",

@@ -4,7 +4,9 @@ import { Logger } from '../logger/logger.manager';
 import { ParsedIncommingRequest } from '../server/server.types';
 
 export class MessagesController {
-    private constructor(private readonly messagesManager: MessagesManager) { }
+    private readonly logger = Logger.forClass(MessagesController.name);
+
+    private constructor(private readonly messagesManager: MessagesManager) {}
 
     private static instance = new MessagesController(MessagesManager.get());
 
@@ -17,7 +19,7 @@ export class MessagesController {
             throw new Error('Invalid message');
         }
 
-        Logger.logIncommingMessage(data);
+        this.logger.info(`Saving message: ${JSON.stringify(data)}`);
         return this.messagesManager.save(data);
     };
 

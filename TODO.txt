@@ -1,1 +1,4 @@
 1. Add appropriate error handling
+2. Decouple classes/methods by their semantical meaning
+3. Optimize docker install with production only dependencies
+4. Add timeout to response of secondary nodes.

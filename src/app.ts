@@ -16,7 +16,7 @@ import { EnvContext } from './utils/env.context';
         .registerRoute({
             path: appRoutes.messages,
             method: 'GET',
-            processor: MessagesController.get().getAll
+            processor: MessagesController.get().getAll,
         })
         .run();
 

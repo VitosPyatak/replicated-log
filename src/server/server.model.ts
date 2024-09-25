@@ -18,15 +18,11 @@ export class ServerFactory {
     public constructor(
         private readonly server: Server,
         private readonly httpClient: HttpClient,
-        private readonly authManager: AuthManager
-    ) { }
+        private readonly authManager: AuthManager,
+    ) {}
 
     public static base = (): ServerFactory => {
-        return new ServerFactory(
-            createServer(),
-            HttpClient.get(),
-            AuthManager.get()
-        );
+        return new ServerFactory(createServer(), HttpClient.get(), AuthManager.get());
     };
 
     public registerRoute = (options: RegisterRouteOptions): ServerFactory => {
@@ -35,20 +31,20 @@ export class ServerFactory {
     };
 
     public run = (): ServerFactory => {
-        this.server.on('request', async (request, response) => {
-            try {
-                return await this.processIncomingRequest(request, response);
-            } catch (error: any) {
-                response.writeHead(500, error.message);
-                return response.end();
-            }
-        }).listen(PORT, () => {
-            this.logger.info(`Listening on ${PORT}`);
-        });
+        this.server
+            .on('request', async (request, response) => {
+                try {
+                    return await this.processIncomingRequest(request, response);
+                } catch (error: any) {
+                    response.writeHead(500, error.message);
+                    return response.end();
+                }
+            })
+            .listen(PORT, () => {
+                this.logger.info(`Listening on ${PORT}`);
+            });
         return this;
     };
-
-
 
     private processIncomingRequest = async (request: IncomingMessage, response: ServerResponse) => {
         const key = this.constructRegistryKeyFromRequest(request);
@@ -70,28 +66,28 @@ export class ServerFactory {
     private processRequestReplication = async (
         request: IncomingMessage,
         serverResponse: ServerResponse,
-        { path, method, accessStrategy, processor }: RegisterRouteOptions
+        { path, method, accessStrategy, processor }: RegisterRouteOptions,
     ) => {
         const requestData = await parseIncommingMessageData(request);
 
         const processorResponse = await processor({ data: requestData });
-        const replicationRequestsOptions: HttpClientGeneralRequestProperties[] = EnvContext.getReplicaHostNames()
-            .map(host => {
-                const headers: Record<string, string> = accessStrategy ? { authorization: this.authManager.generateAccessToken(accessStrategy) } : {};
-                this.logger.info(JSON.stringify(headers));
-                return { host, path, method: method as HttpMethod, data: requestData, headers }
-            });
+        const replicationRequestsOptions: HttpClientGeneralRequestProperties[] = EnvContext.getReplicaHostNames().map(
+            (host) => {
+                const headers: Record<string, string> = accessStrategy
+                    ? { authorization: this.authManager.generateAccessToken(accessStrategy) }
+                    : {};
+                return { host, path, method: method as HttpMethod, data: requestData, headers, port: PORT };
+            },
+        );
 
-        return Promise
-            .all(replicationRequestsOptions.map(this.httpClient.request))
-            .then(() => this.processSuccessfullRequest(serverResponse, processorResponse));
-    }
+        return Promise.all(replicationRequestsOptions.map(this.httpClient.request)).then(() =>
+            this.processSuccessfullRequest(serverResponse, processorResponse),
+        );
+    };
 
     private processSuccessfullRequest = (response: ServerResponse, data: any) => {
-        return response
-            .writeHead(200, defaultAppHeaders)
-            .end(JSON.stringify({ data }))
-    }
+        return response.writeHead(200, defaultAppHeaders).end(JSON.stringify({ data }));
+    };
 
     private handleNotFound = (response: ServerResponse) => {
         response.writeHead(404);

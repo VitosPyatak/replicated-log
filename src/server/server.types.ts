@@ -1,8 +1,8 @@
 import { AppAcessStrategies } from '../auth/auth.types';
 
 export type ParsedIncommingRequest<T> = {
-    data?: T
-}
+    data?: T;
+};
 
 export type RegisterRouteOptions = {
     path: string;
@@ -11,4 +11,3 @@ export type RegisterRouteOptions = {
     replicateRequest?: boolean;
     accessStrategy?: AppAcessStrategies;
 };
-
