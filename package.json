@@ -4,6 +4,8 @@
     "description": "",
     "main": "app.js",
     "scripts": {
+        "docker:build": "docker build -t replicated-log:latest .",
+        "compose:up": "npm run docker:build && docker-compose up",
         "build:dev": "tsc --p tsconfig.dev.json",
         "build": "tsc --p tsconfig.json",
         "start": "node dist/app.js",

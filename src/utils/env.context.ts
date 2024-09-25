@@ -11,6 +11,10 @@ export class EnvContext {
         return EnvContext._isMaster;
     };
 
+    public static isSecondary = () => {
+        return !this.isMaster();
+    };
+
     public static getReplicaHostNames = () => {
         return EnvContext._replicaHostNames;
     };

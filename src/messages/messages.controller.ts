@@ -2,6 +2,10 @@ import { MessagesManager } from './messages.manager';
 import { StoreMessage } from './messages.types';
 import { Logger } from '../logger/logger.manager';
 import { ParsedIncommingRequest } from '../server/server.types';
+import { EnvContext } from '../utils/env.context';
+import { randomTimeoutUpTo } from '../utils/time.utils';
+
+const TIMEOUT_LIMIT = 10000;
 
 export class MessagesController {
     private readonly logger = Logger.forClass(MessagesController.name);
@@ -20,7 +24,9 @@ export class MessagesController {
         }
 
         this.logger.info(`Saving message: ${JSON.stringify(data)}`);
-        return this.messagesManager.save(data);
+
+        const timeout = EnvContext.isSecondary() ? TIMEOUT_LIMIT : 0;
+        return randomTimeoutUpTo(timeout).then(() => this.messagesManager.save(data));
     };
 
     public getAll = async (__: ParsedIncommingRequest<any>) => {
