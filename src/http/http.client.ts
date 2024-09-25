@@ -40,7 +40,7 @@ export class HttpClient {
         { host, path, data, headers, port }: HttpClientRequestProperties,
     ) => {
         const request = http.request({
-            host: host,
+            host,
             path,
             method,
             port,

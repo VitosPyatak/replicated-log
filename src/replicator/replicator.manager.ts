@@ -5,6 +5,10 @@ import { Logger } from '../logger/logger.manager';
 import { PORT } from '../server/server.model';
 import { ParsedIncommingRequest, RegisterRouteOptions } from '../server/server.types';
 import { EnvContext } from '../utils/env.context';
+import events from 'events';
+import crypto from 'crypto';
+
+export const eventEmitter = new events.EventEmitter();
 
 export class ReplicationManager {
     private readonly logger = Logger.forClass(ReplicationManager.name);
@@ -29,6 +33,42 @@ export class ReplicationManager {
             },
         );
 
-        return Promise.all(replicationRequestsOptions.map(this.httpClient.request));
+        if (this.isMajorReplication()) {
+            return await this.executeMajorReplication(replicationRequestsOptions);
+        }
+
+        return this.executeWriteConcernReplication(replicationRequestsOptions);
+    };
+
+    private executeWriteConcernReplication = async (requestOptions: HttpClientGeneralRequestProperties[]) => {
+        let replicationsCount = 0;
+
+        const eventId = crypto.randomUUID();
+
+        return new Promise((resolve) => {
+            eventEmitter.on(eventId, (replicaName) => {
+                replicationsCount++;
+                this.logger.info(`Received acknowledgment from ${replicaName}`);
+                if (replicationsCount === EnvContext.getReplicationWriteConcern()) {
+                    eventEmitter.removeAllListeners(eventId);
+                    resolve(requestOptions);
+                }
+            });
+
+            requestOptions.forEach((options) => {
+                this.httpClient.request(options).then(() => {
+                    eventEmitter.emit(eventId, options.host);
+                });
+            });
+        });
+    };
+
+    private executeMajorReplication = async (requestOptions: HttpClientGeneralRequestProperties[]) => {
+        await Promise.all(requestOptions.map(this.httpClient.request));
+        this.logger.info('Received acknowledgment from all replicas');
+    };
+
+    private isMajorReplication = () => {
+        return EnvContext.getNumberOfReplicas() === EnvContext.getReplicationWriteConcern();
     };
 }
