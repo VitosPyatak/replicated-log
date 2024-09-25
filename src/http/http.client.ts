@@ -15,6 +15,7 @@ export class HttpClient {
     private readonly httpMethodToProcessor: Record<HttpMethod, (options: HttpClientRequestProperties) => Promise<any>> =
         {
             POST: (options) => this.post(options),
+            GET: (options) => this.get(options),
         };
 
     public request = async ({ method, ...rest }: HttpClientGeneralRequestProperties) => {
@@ -28,6 +29,10 @@ export class HttpClient {
 
     public post = async (options: HttpClientRequestProperties) => {
         return this.processHttpRequest(httpMethods.POST, options);
+    };
+
+    public get = async (options: HttpClientRequestProperties) => {
+        return this.processHttpRequest(httpMethods.GET, options);
     };
 
     private processHttpRequest = async (

@@ -22,4 +22,12 @@ export class EnvContext {
     public static getSecondaryAccessToken = () => {
         return EnvContext._secondaryAccessToken;
     };
+
+    public static getReplicationWriteConcern = () => {
+        return envConstans.replicationWriteConcern;
+    };
+
+    public static getNumberOfReplicas = () => {
+        return this.getReplicaHostNames().length;
+    };
 }

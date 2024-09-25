@@ -4,6 +4,7 @@ export const defaultAppHeaders = {
 
 export const httpMethods = {
     POST: 'POST',
+    GET: 'GET',
 } as const;
 
 export type HttpMethod = (typeof httpMethods)[keyof typeof httpMethods];

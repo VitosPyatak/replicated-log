@@ -1,14 +1,12 @@
 import { Server, createServer, ServerResponse, IncomingMessage } from 'http';
 import { RegisterRouteOptions } from './server.types';
-import { defaultAppHeaders, HttpMethod } from '../constants/http.constants';
-import { EnvContext } from '../utils/env.context';
-import { HttpClientGeneralRequestProperties } from '../http/http.types';
-import { HttpClient } from '../http/http.client';
+import { defaultAppHeaders } from '../constants/http.constants';
 import { parseIncommingMessageData } from './server.utils';
 import { Logger } from '../logger/logger.manager';
 import { AuthManager } from '../auth/auth.manager';
+import { ReplicationManager } from '../replicator/replicator.manager';
 
-const PORT = 8000;
+export const PORT = 8000;
 
 export class ServerFactory {
     private readonly logger = Logger.forClass(ServerFactory.name);
@@ -17,12 +15,12 @@ export class ServerFactory {
 
     public constructor(
         private readonly server: Server,
-        private readonly httpClient: HttpClient,
+        private readonly replicationManager: ReplicationManager,
         private readonly authManager: AuthManager,
     ) {}
 
     public static base = (): ServerFactory => {
-        return new ServerFactory(createServer(), HttpClient.get(), AuthManager.get());
+        return new ServerFactory(createServer(), ReplicationManager.base(), AuthManager.get());
     };
 
     public registerRoute = (options: RegisterRouteOptions): ServerFactory => {
@@ -66,23 +64,14 @@ export class ServerFactory {
     private processRequestReplication = async (
         request: IncomingMessage,
         serverResponse: ServerResponse,
-        { path, method, accessStrategy, processor }: RegisterRouteOptions,
+        requestOptions: RegisterRouteOptions,
     ) => {
         const requestData = await parseIncommingMessageData(request);
 
-        const processorResponse = await processor({ data: requestData });
-        const replicationRequestsOptions: HttpClientGeneralRequestProperties[] = EnvContext.getReplicaHostNames().map(
-            (host) => {
-                const headers: Record<string, string> = accessStrategy
-                    ? { authorization: this.authManager.generateAccessToken(accessStrategy) }
-                    : {};
-                return { host, path, method: method as HttpMethod, data: requestData, headers, port: PORT };
-            },
-        );
+        const processorResponse = await requestOptions.processor({ data: requestData });
+        await this.replicationManager.replicate({ data: requestData }, requestOptions);
 
-        return Promise.all(replicationRequestsOptions.map(this.httpClient.request)).then(() =>
-            this.processSuccessfullRequest(serverResponse, processorResponse),
-        );
+        return this.processSuccessfullRequest(serverResponse, processorResponse);
     };
 
     private processSuccessfullRequest = (response: ServerResponse, data: any) => {
