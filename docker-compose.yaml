@@ -24,6 +24,10 @@ services:
         <<: *replica
         ports:
             - '4002:8000'
+    replica3:
+        <<: *replica
+        ports:
+            - '4003:8000'
 
 networks:
     replicated_log_network:
