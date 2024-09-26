@@ -24,10 +24,7 @@ export class EnvContext {
     };
 
     public static getReplicationWriteConcern = () => {
-        if (envConstans.replicationWriteConcern) {
-            return +envConstans.replicationWriteConcern;
-        }
-        return this.getNumberOfReplicas();
+        return envConstans.replicationWriteConcern;
     };
 
     public static getNumberOfReplicas = () => {

@@ -5,10 +5,8 @@ import { Logger } from '../logger/logger.manager';
 import { PORT } from '../server/server.model';
 import { ParsedIncommingRequest, RegisterRouteOptions } from '../server/server.types';
 import { EnvContext } from '../utils/env.context';
-import events from 'events';
-import crypto from 'crypto';
 
-export const eventEmitter = new events.EventEmitter();
+const MASTER_CONCERN_REPLICATIONS = 0;
 
 export class ReplicationManager {
     private readonly logger = Logger.forClass(ReplicationManager.name);
@@ -33,42 +31,36 @@ export class ReplicationManager {
             },
         );
 
-        if (this.isMajorReplication()) {
-            return await this.executeMajorReplication(replicationRequestsOptions);
-        }
-
-        return this.executeWriteConcernReplication(replicationRequestsOptions);
+        return await this.processReplication(replicationRequestsOptions);
     };
 
-    private executeWriteConcernReplication = async (requestOptions: HttpClientGeneralRequestProperties[]) => {
+    private processReplication = async (requestOptions: HttpClientGeneralRequestProperties[]) => {
         let replicationsCount = 0;
+        const requiredReplicationsCount = this.getRequiredReplicationsCount();
 
-        const eventId = crypto.randomUUID();
+        this.logger.info(`Required replications count: ${requiredReplicationsCount}`);
 
-        return new Promise((resolve) => {
-            eventEmitter.on(eventId, (replicaName) => {
-                replicationsCount++;
-                this.logger.info(`Received acknowledgment from ${replicaName}`);
-                if (replicationsCount === EnvContext.getReplicationWriteConcern()) {
-                    eventEmitter.removeAllListeners(eventId);
-                    resolve(requestOptions);
-                }
-            });
+        return new Promise<void>((resolve) => {
+            if (requiredReplicationsCount === MASTER_CONCERN_REPLICATIONS) resolve();
 
             requestOptions.forEach((options) => {
                 this.httpClient.request(options).then(() => {
-                    eventEmitter.emit(eventId, options.host);
+                    this.logger.info(`Received acknowledgment from ${options.host}`);
+                    replicationsCount++;
+                    if (replicationsCount === requiredReplicationsCount) {
+                        this.logger.info(
+                            `Resolving request after receiving acknowledgment from ${replicationsCount} replicas`,
+                        );
+                        resolve();
+                    }
                 });
             });
         });
     };
 
-    private executeMajorReplication = async (requestOptions: HttpClientGeneralRequestProperties[]) => {
-        await Promise.all(requestOptions.map(this.httpClient.request));
-        this.logger.info('Received acknowledgment from all replicas');
-    };
-
-    private isMajorReplication = () => {
-        return EnvContext.getNumberOfReplicas() === EnvContext.getReplicationWriteConcern();
+    private getRequiredReplicationsCount = () => {
+        const replicationConcern = EnvContext.getReplicationWriteConcern();
+        if (replicationConcern === 'master') return MASTER_CONCERN_REPLICATIONS;
+        return +replicationConcern;
     };
 }
