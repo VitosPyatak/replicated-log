@@ -81,10 +81,14 @@ export class ServerFactory {
         const requestData = await parseIncommingMessageData<Record<string, any>>(request);
         const data: ReplicationEntity<Record<string, any>> = { ...requestData, _replicationId: replicationId };
 
-        const actualResponse = await requestOptions.processor({ data });
-        await this.replicationManager.replicate({ data }, requestOptions);
-
-        return this.processSuccessfullRequest(serverResponse, actualResponse);
+        try {
+            const actualResponse = await requestOptions.processor({ data });
+            await this.replicationManager.replicate({ data }, requestOptions);
+            return this.processSuccessfullRequest(serverResponse, actualResponse);
+        } catch (error: any) {
+            serverResponse.writeHead(500, error.message);
+            return serverResponse.end();
+        }
     };
 
     private processSuccessfullRequest = (response: ServerResponse, data: any) => {

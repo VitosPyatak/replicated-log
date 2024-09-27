@@ -16,6 +16,10 @@ export class MessagesManager {
         _replicationId,
         ...message
     }: ReplicationEntity<StoreMessage>): ReplicationEntity<StoreMessage> => {
+        if (this.messagesIndex[message.id]) {
+            throw new Error('Message already exists');
+        }
+
         if (_replicationId) {
             this.messagesReplicationIndex[_replicationId] = message;
         }
