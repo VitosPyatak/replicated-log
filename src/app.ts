@@ -9,7 +9,9 @@ import { EnvContext } from './utils/env.context';
         .registerRoute({
             path: appRoutes.messages,
             method: httpMethods.POST,
-            replicateRequest: EnvContext.isMaster(),
+            replication: {
+                doReplicate: EnvContext.isMaster(),
+            },
             accessStrategy: 'default',
             processor: MessagesController.get().saveMessage,
         })

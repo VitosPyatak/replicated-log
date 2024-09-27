@@ -5,6 +5,8 @@ import { parseIncommingMessageData } from './server.utils';
 import { Logger } from '../logger/logger.manager';
 import { AuthManager } from '../auth/auth.manager';
 import { ReplicationManager } from '../replicator/replicator.manager';
+import { ReplicationIdStore } from '../replicator/replication-id.store';
+import { ReplicationEntity } from '../replicator/replicator.types';
 
 export const PORT = 8000;
 
@@ -12,6 +14,8 @@ export class ServerFactory {
     private readonly logger = Logger.forClass(ServerFactory.name);
 
     private routeRegistry: Record<string, RegisterRouteOptions> = {};
+
+    private replicationIdStores: Record<string, ReplicationIdStore> = {};
 
     public constructor(
         private readonly server: Server,
@@ -24,7 +28,13 @@ export class ServerFactory {
     };
 
     public registerRoute = (options: RegisterRouteOptions): ServerFactory => {
-        this.routeRegistry[this.constructRegistryKey(options)] = options;
+        const key = this.constructRegistryKey(options);
+
+        if (options.replication?.doReplicate) {
+            this.replicationIdStores[key] = new ReplicationIdStore();
+        }
+
+        this.routeRegistry[key] = options;
         return this;
     };
 
@@ -52,8 +62,9 @@ export class ServerFactory {
 
         this.authManager.validate(request, options);
 
-        if (options.replicateRequest) {
-            return this.processRequestReplication(request, response, options);
+        if (options.replication?.doReplicate) {
+            const replicationId = this.replicationIdStores[key].next();
+            return this.processRequestReplication(request, response, options, replicationId);
         }
 
         const requestData = await parseIncommingMessageData(request);
@@ -65,13 +76,15 @@ export class ServerFactory {
         request: IncomingMessage,
         serverResponse: ServerResponse,
         requestOptions: RegisterRouteOptions,
+        replicationId: number,
     ) => {
-        const requestData = await parseIncommingMessageData(request);
+        const requestData = await parseIncommingMessageData<Record<string, any>>(request);
+        const data: ReplicationEntity<Record<string, any>> = { ...requestData, _replicationId: replicationId };
 
-        const processorResponse = await requestOptions.processor({ data: requestData });
-        await this.replicationManager.replicate({ data: requestData }, requestOptions);
+        const actualResponse = await requestOptions.processor({ data });
+        await this.replicationManager.replicate({ data }, requestOptions);
 
-        return this.processSuccessfullRequest(serverResponse, processorResponse);
+        return this.processSuccessfullRequest(serverResponse, actualResponse);
     };
 
     private processSuccessfullRequest = (response: ServerResponse, data: any) => {

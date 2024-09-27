@@ -5,6 +5,7 @@ import { Logger } from '../logger/logger.manager';
 import { PORT } from '../server/server.model';
 import { ParsedIncommingRequest, RegisterRouteOptions } from '../server/server.types';
 import { EnvContext } from '../utils/env.context';
+import { ReplicationEntity } from './replicator.types';
 
 const MASTER_CONCERN_REPLICATIONS = 0;
 
@@ -20,14 +21,18 @@ export class ReplicationManager {
         return new ReplicationManager(HttpClient.get(), AuthManager.get());
     };
 
-    public replicate = async (parsedRequest: ParsedIncommingRequest<any>, requestOptions: RegisterRouteOptions) => {
+    public replicate = async (
+        parsedRequest: ParsedIncommingRequest<ReplicationEntity<Record<string, any>>>,
+        requestOptions: RegisterRouteOptions,
+    ) => {
         const { accessStrategy, path, method } = requestOptions;
+        const { data } = parsedRequest;
         const replicationRequestsOptions: HttpClientGeneralRequestProperties[] = EnvContext.getReplicaHostNames().map(
             (host) => {
                 const headers: Record<string, string> = accessStrategy
                     ? { authorization: this.authManager.generateAccessToken(accessStrategy) }
                     : {};
-                return { host, path, method, data: parsedRequest.data, headers, port: PORT };
+                return { host, path, method, data, headers, port: PORT };
             },
         );
 
